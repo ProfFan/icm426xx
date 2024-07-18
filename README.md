@@ -29,6 +29,7 @@ async fn main() {
     let mut pin = PinMock::new(&[PinTransaction::set(PinState::High)]);
     let spidev =
         embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
+
     let mut icm = icm426xx::ICM42688::new(spidev);
     let mut icm = icm.initialize(Delay).await.unwrap();
     let mut bank = icm.ll().bank::<{ icm426xx::register_bank::BANK0 }>();
