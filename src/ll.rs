@@ -32,6 +32,11 @@ impl<BUS> ICM42688<BUS> {
         Registers::new(&mut self.bus)
     }
 
+    /// Get a reference to the bus
+    pub fn bus(&mut self) -> &mut BUS {
+        &mut self.bus
+    }
+
     /// Release the bus from the ICM42688 instance
     pub fn release(self) -> BUS {
         self.bus
@@ -49,8 +54,8 @@ mod test {
     use embedded_hal_mock::eh1::digital::{State as PinState, Transaction as PinTransaction};
     use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
-    #[async_std::test]
-    async fn test_bank_noop() {
+    #[test]
+    fn test_bank_noop() {
         let expectations: &[SpiTransaction<u8>] = &[];
 
         let spi = SpiMock::new(expectations);
@@ -65,9 +70,9 @@ mod test {
         pin.done();
     }
 
-    #[async_std::test]
+    #[test]
     #[should_panic]
-    async fn test_bank_noop_wrong() {
+    fn test_bank_noop_wrong() {
         let expectations: &[SpiTransaction<u8>] = &[];
 
         let spi = SpiMock::new(expectations);
