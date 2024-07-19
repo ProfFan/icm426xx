@@ -105,6 +105,14 @@ impl FifoPacket4 {
         let ext_gyro_z = self.ext_accel_z_gyro_z & 0x0F;
         self.convert_parts_to_20bit(self.gyro_data_z1, self.gyro_data_z0, ext_gyro_z)
     }
+
+    pub fn temperature_raw(&self) -> u16 {
+        ((self.temp_data1 as u16) << 8) | self.temp_data0 as u16
+    }
+
+    pub fn timestamp(&self) -> u16 {
+        ((self.timestamp_h as u16) << 8) | self.timestamp_l as u16
+    }
 }
 
 // Assert that the size of the struct is 20 bytes
