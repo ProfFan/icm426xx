@@ -155,7 +155,6 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .await
             .unwrap();
 
-        drop(bank0);
         self.ll.set_bank(1);
 
         // Set bank 1
@@ -196,7 +195,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .async_write(|r| r.bank_sel(2))
             .await
             .unwrap();
-        drop(bank1);
+
         self.ll.set_bank(2);
 
         // Set bank 2
@@ -227,7 +226,6 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .await
             .unwrap();
 
-        drop(bank2);
         self.ll.set_bank(0);
 
         Ok(ICM42688 {

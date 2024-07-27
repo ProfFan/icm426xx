@@ -5,8 +5,19 @@ pub struct ICM42688<BUS> {
     current_bank: RegisterBank,
 }
 
+#[derive(Debug, defmt::Format)]
+pub struct BankSelectionError;
+
+impl core::fmt::Display for BankSelectionError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Bank selection error")
+    }
+}
+
+impl core::error::Error for BankSelectionError {}
+
 pub trait BankSelectable {
-    fn set_bank(&mut self, bank: RegisterBank) -> Result<(), ()>;
+    fn set_bank(&mut self, bank: RegisterBank) -> Result<(), BankSelectionError>;
 }
 
 impl<BUS> ICM42688<BUS> {

@@ -4,6 +4,8 @@
 //! BANK_SEL register. This module provides a type-safe interface to the register banks.
 #![allow(non_camel_case_types)]
 #![allow(unused)]
+#![allow(clippy::eq_op)]
+#![allow(clippy::identity_op)]
 
 use core::{fmt, marker::PhantomData};
 
