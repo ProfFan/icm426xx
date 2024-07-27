@@ -9,6 +9,9 @@
 
 use core::{fmt, marker::PhantomData};
 
+#[cfg(not(feature = "async"))]
+use embedded_hal::spi;
+
 #[cfg(feature = "async")]
 use embedded_hal_async::spi as async_spi;
 
@@ -68,12 +71,12 @@ pub struct RegAccessor<'s, 'b, R, BUS, const BANK: RegisterBank>(
 );
 
 #[cfg(not(feature = "async"))]
-impl<'s, R, BUS, const BANK: RegisterBank> RegAccessor<'s, R, BUS, BANK>
+impl<'s, 'b, R, BUS, const BANK: RegisterBank> RegAccessor<'s, 'b, R, BUS, BANK>
 where
     BUS: spi::SpiDevice<u8>,
 {
     /// Read from the register
-    pub fn read(&mut self) -> Result<R::Read, Error<SPI>>
+    pub fn read(&mut self) -> Result<R::Read, Error<BUS>>
     where
         R: Register + Readable,
     {
@@ -90,7 +93,7 @@ where
     }
 
     /// Write to the register
-    pub fn write<F>(&mut self, f: F) -> Result<(), Error<SPI>>
+    pub fn write<F>(&mut self, f: F) -> Result<(), Error<BUS>>
     where
         R: Register + Writable,
         F: FnOnce(&mut R::Write) -> &mut R::Write,
@@ -101,13 +104,13 @@ where
         let buffer = R::buffer(&mut w);
         init_header::<R>(true, buffer);
 
-        SPI::write(&mut self.0.bus, buffer).map_err(Error::Transfer)?;
+        BUS::write(&mut self.0.bus, buffer).map_err(Error::Transfer)?;
 
         Ok(())
     }
 
     /// Modify the register
-    pub fn modify<F>(&mut self, f: F) -> Result<(), Error<SPI>>
+    pub fn modify<F>(&mut self, f: F) -> Result<(), Error<BUS>>
     where
         R: Register + Readable + Writable,
         F: for<'r> FnOnce(&mut R::Read, &'r mut R::Write) -> &'r mut R::Write,
@@ -122,7 +125,7 @@ where
         let buffer = <R as Writable>::buffer(&mut w);
         init_header::<R>(true, buffer);
 
-        SPI::write(&mut self.0.bus, buffer).map_err(Error::Transfer)?;
+        BUS::write(&mut self.0.bus, buffer).map_err(Error::Transfer)?;
 
         Ok(())
     }

@@ -99,8 +99,35 @@ mod test {
         pin.done();
     }
 
+    #[cfg(not(feature = "async"))]
+    #[test]
+    fn test_who_am_i() {
+        let expectations: &[SpiTransaction<u8>] = &[
+            SpiTransaction::transfer_in_place(vec![0x75 | 0x80, 0x00], vec![0x12, 0x47]),
+            SpiTransaction::flush(),
+        ];
+
+        let spi = SpiMock::new(expectations);
+        let mut pin = PinMock::new(&[
+            PinTransaction::set(PinState::High),
+            PinTransaction::set(PinState::Low),
+            PinTransaction::set(PinState::High),
+        ]);
+        let spidev =
+            embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
+        let mut icm = ICM42688::new(spidev);
+        let mut bank = icm.bank::<BANK0>();
+        let whoami = bank.who_am_i().read().unwrap().value();
+        assert_eq!(whoami, 0x47);
+
+        let mut spidev = icm.release();
+        spidev.bus_mut().done();
+        pin.done();
+    }
+
+    #[cfg(feature = "async")]
     #[async_std::test]
-    async fn test_who_am_i() {
+    async fn test_who_am_i_async() {
         let expectations: &[SpiTransaction<u8>] = &[
             SpiTransaction::transfer(vec![0x75 | 0x80], vec![0x12, 0x47]),
             SpiTransaction::flush(),

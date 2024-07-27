@@ -22,6 +22,6 @@ embedded-hal-bus = { version = "0.2.*", features = ["async"] }
 async-std = { version = "1.12.*", features = ["attributes"] }
 
 [features]
-default = ["async"]
+default = []
 async = ["dep:embedded-hal-async"]
 blocking = []

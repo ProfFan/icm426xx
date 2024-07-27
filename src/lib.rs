@@ -20,7 +20,7 @@ pub struct Ready;
 ///
 /// Usage:
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// # use async_std::prelude::*; // Just for the runtime
 /// # use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 /// # use embedded_hal_mock::eh1::digital::Mock as PinMock;
