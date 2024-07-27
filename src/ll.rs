@@ -14,7 +14,8 @@ impl core::fmt::Display for BankSelectionError {
     }
 }
 
-impl core::error::Error for BankSelectionError {}
+// Only available in nightly
+// impl core::error::Error for BankSelectionError {}
 
 pub trait BankSelectable {
     fn set_bank(&mut self, bank: RegisterBank) -> Result<(), BankSelectionError>;
