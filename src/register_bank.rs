@@ -71,7 +71,7 @@ pub struct RegAccessor<'s, 'b, R, BUS, const BANK: RegisterBank>(
 );
 
 #[cfg(not(feature = "async"))]
-impl<'s, 'b, R, BUS, const BANK: RegisterBank> RegAccessor<'s, 'b, R, BUS, BANK>
+impl<R, BUS, const BANK: RegisterBank> RegAccessor<'_, '_, R, BUS, BANK>
 where
     BUS: spi::SpiDevice<u8>,
 {
@@ -104,7 +104,7 @@ where
         let buffer = R::buffer(&mut w);
         init_header::<R>(true, buffer);
 
-        BUS::write(&mut self.0.bus, buffer).map_err(Error::Transfer)?;
+        BUS::write(self.0.bus, buffer).map_err(Error::Transfer)?;
 
         Ok(())
     }
@@ -125,7 +125,7 @@ where
         let buffer = <R as Writable>::buffer(&mut w);
         init_header::<R>(true, buffer);
 
-        BUS::write(&mut self.0.bus, buffer).map_err(Error::Transfer)?;
+        BUS::write(self.0.bus, buffer).map_err(Error::Transfer)?;
 
         Ok(())
     }
@@ -133,7 +133,7 @@ where
 
 /// Provide async access to a register
 #[cfg(feature = "async")]
-impl<'s, 'b, R, BUS, const BANK: RegisterBank> RegAccessor<'s, 'b, R, BUS, BANK>
+impl<R, BUS, const BANK: RegisterBank> RegAccessor<'_, '_, R, BUS, BANK>
 where
     BUS: async_spi::SpiDevice<u8>,
 {

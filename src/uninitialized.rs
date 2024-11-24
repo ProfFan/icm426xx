@@ -1,4 +1,4 @@
-/// Indicates that the `ICM42688` instance is not initialized yet
+// Indicates that the `ICM42688` instance is not initialized yet
 
 #[cfg(feature = "async")]
 use embedded_hal_async::delay::DelayNs;
@@ -7,6 +7,8 @@ use embedded_hal_async::delay::DelayNs;
 use embedded_hal::delay::DelayNs;
 
 use crate::{Ready, Uninitialized, ICM42688};
+
+pub struct InitializationError;
 
 impl<SPI> ICM42688<SPI, Uninitialized> {
     /// Create a new instance of `DW3000`
@@ -21,7 +23,10 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
     }
 
     #[cfg(feature = "async")]
-    pub async fn initialize(mut self, mut delay: impl DelayNs) -> Result<ICM42688<SPI, Ready>, ()>
+    pub async fn initialize(
+        mut self,
+        mut delay: impl DelayNs,
+    ) -> Result<ICM42688<SPI, Ready>, InitializationError>
     where
         SPI: embedded_hal_async::spi::SpiDevice,
     {
@@ -44,7 +49,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         // Read the WHO_AM_I register to verify the device is present
         let who_am_i = bank0.who_am_i().async_read().await.unwrap().value();
         if who_am_i != 0x47 {
-            return Err(());
+            return Err(InitializationError);
         }
 
         bank0
@@ -240,7 +245,10 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
     }
 
     #[cfg(not(feature = "async"))]
-    pub fn initialize(mut self, mut delay: impl DelayNs) -> Result<ICM42688<SPI, Ready>, ()>
+    pub fn initialize(
+        mut self,
+        mut delay: impl DelayNs,
+    ) -> Result<ICM42688<SPI, Ready>, InitializationError>
     where
         SPI: embedded_hal::spi::SpiDevice,
     {
@@ -262,7 +270,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         // Read the WHO_AM_I register to verify the device is present
         let who_am_i = bank0.who_am_i().read().unwrap().value();
         if who_am_i != 0x47 {
-            return Err(());
+            return Err(InitializationError);
         }
 
         bank0

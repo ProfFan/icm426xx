@@ -6,6 +6,8 @@ use embedded_hal::spi::SpiDevice;
 
 use crate::{register_bank::Register, Ready, ICM42688};
 
+pub struct FifoReadError;
+
 impl<SPI> ICM42688<SPI, Ready>
 where
     SPI: SpiDevice,
@@ -61,7 +63,7 @@ where
     ///
     /// Buffer must hold at least
     #[cfg(feature = "async")]
-    pub async fn read_fifo(&mut self, buffer: &mut [u32]) -> Result<usize, ()> {
+    pub async fn read_fifo(&mut self, buffer: &mut [u32]) -> Result<usize, FifoReadError> {
         /// We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in one go
         const INT_STATUS_ADDR: u8 = crate::register_bank::bank0::INT_STATUS::ID;
 
@@ -73,7 +75,7 @@ where
             .bus
             .transfer_in_place(buffer)
             .await
-            .map_err(|_| ())?;
+            .map_err(|_| FifoReadError)?;
 
         // Buffer now contains [0, INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, DATA, DATA, ...]
         // We need to check the FIFO_COUNT and then return the number of samples read
@@ -83,7 +85,7 @@ where
     }
 
     #[cfg(not(feature = "async"))]
-    pub fn read_fifo(&mut self, buffer: &mut [u32]) -> Result<usize, ()> {
+    pub fn read_fifo(&mut self, buffer: &mut [u32]) -> Result<usize, FifoReadError> {
         /// We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in one go
         const INT_STATUS_ADDR: u8 = crate::register_bank::bank0::INT_STATUS::ID;
 
@@ -91,7 +93,10 @@ where
 
         buffer[0] = INT_STATUS_ADDR | 0x80; // Read bit set
 
-        self.ll.bus.transfer_in_place(buffer).map_err(|_| ())?;
+        self.ll
+            .bus
+            .transfer_in_place(buffer)
+            .map_err(|_| FifoReadError)?;
 
         // Buffer now contains [0, INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, DATA, DATA, ...]
         // We need to check the FIFO_COUNT and then return the number of samples read

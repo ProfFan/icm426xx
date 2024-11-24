@@ -28,7 +28,7 @@ impl defmt::Format for FifoHeader {
     }
 }
 
-#[derive(Debug, Clone, Copy, Format, PartialEq, NoUninit, AnyBitPattern)]
+#[derive(Debug, Clone, Copy, Format, PartialEq, NoUninit, AnyBitPattern, Default)]
 #[repr(C)]
 pub struct FifoPacket4 {
     pub fifo_header: u8,
