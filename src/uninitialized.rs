@@ -73,14 +73,6 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .async_modify(|_, w| w.afsr(0b01)) // Disable AFSR (undocumented adaptive scale change)
             .await
             .unwrap();
-        bank0
-            .pwr_mgmt0()
-            .async_modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))
-            .await
-            .unwrap();
-
-        // Delay for 200us per the datasheet after writing to PWR_MGMT0
-        delay.delay_us(200).await;
 
         bank0
             .gyro_config0()
@@ -239,6 +231,18 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
 
         self.ll.set_bank(0);
 
+        // Only enable gyro and accel when all registers are written
+        // Refer to Section 12.9 of the datasheet
+        self.ll
+            .bank::<0>()
+            .pwr_mgmt0()
+            .async_modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))
+            .await
+            .unwrap();
+
+        // Delay for 200us per the datasheet after writing to PWR_MGMT0
+        delay.delay_us(200).await;
+
         Ok(ICM42688 {
             ll: self.ll,
             _state: Ready,
@@ -287,13 +291,6 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .intf_config1()
             .modify(|_, w| w.afsr(0b01)) // Disable AFSR (undocumented adaptive scale change)
             .unwrap();
-        bank0
-            .pwr_mgmt0()
-            .modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))
-            .unwrap();
-
-        // Delay for 200us per the datasheet after writing to PWR_MGMT0
-        delay.delay_us(200);
 
         bank0
             .gyro_config0()
@@ -419,6 +416,15 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         bank2.reg_bank_sel().write(|r| r.bank_sel(0)).unwrap();
 
         self.ll.set_bank(0);
+
+        self.ll
+            .bank::<0>()
+            .pwr_mgmt0()
+            .modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))
+            .unwrap();
+
+        // Delay for 200us per the datasheet after writing to PWR_MGMT0
+        delay.delay_us(200);
 
         Ok(ICM42688 {
             ll: self.ll,

@@ -44,6 +44,10 @@ async fn main() {
 }
 ```
 
+## CHANGELOG
+
+- 0.3.2: Fixed the initialization sequence to match the datasheet.
+
 ## LICENSE
 
 MIT OR Apache-2.0
