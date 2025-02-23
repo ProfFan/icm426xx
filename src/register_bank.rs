@@ -141,18 +141,14 @@ where
     pub async fn async_read(&mut self) -> Result<R::Read, Error<BUS>>
     where
         R: Register + Readable,
-        [(); R::LEN]: Sized,
     {
         let mut r = R::read();
         let buffer = R::buffer(&mut r);
-        let mut write_buffer: [u8; R::LEN] = [0u8; R::LEN];
 
-        init_header::<R>(false, &mut write_buffer);
-        async_spi::SpiDevice::transfer(&mut self.0.bus, buffer, &write_buffer)
+        init_header::<R>(false, buffer);
+        async_spi::SpiDevice::transfer_in_place(&mut self.0.bus, buffer)
             .await
             .map_err(|e| Error::Transfer(e))?;
-
-        defmt::trace!("Read: {:#x}, {:#x}", buffer, write_buffer);
 
         Ok(r)
     }
@@ -173,8 +169,6 @@ where
             .await
             .map_err(|e| Error::Transfer(e))?;
 
-        defmt::trace!("Write: {:#x}", buffer);
-
         Ok(())
     }
 
@@ -183,7 +177,6 @@ where
     where
         R: Register + Readable + Writable,
         F: for<'r> FnOnce(&mut R::Read, &'r mut R::Write) -> &'r mut R::Write,
-        [(); R::LEN]: Sized,
     {
         let mut r = self.async_read().await?;
         let mut w = R::write();
@@ -198,8 +191,6 @@ where
         async_spi::SpiDevice::write(&mut self.0.bus, buffer)
             .await
             .map_err(Error::Transfer)?;
-
-        defmt::trace!("Modify: {:#x}", buffer);
 
         Ok(())
     }
@@ -273,7 +264,7 @@ pub trait Register {
     /// The register index
     const ID: u8;
 
-    /// The lenght of the register
+    /// The length of the register
     const LEN: usize;
 }
 
