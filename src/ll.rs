@@ -129,7 +129,7 @@ mod test {
     #[async_std::test]
     async fn test_who_am_i_async() {
         let expectations: &[SpiTransaction<u8>] = &[
-            SpiTransaction::transfer(vec![0x75 | 0x80], vec![0x12, 0x47]),
+            SpiTransaction::transfer_in_place(vec![0x75 | 0x80, 0x00], vec![0x12, 0x47]),
             SpiTransaction::flush(),
         ];
 

@@ -1,6 +1,4 @@
 #![no_std]
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
 #![cfg_attr(not(doctest), doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md")))]
 
 pub mod fifo;
