@@ -51,7 +51,7 @@ where
     }
 
     #[cfg(not(feature = "async"))]
-    pub async fn read_fifo_count(&mut self) -> u16 {
+    pub fn read_fifo_count(&mut self) -> u16 {
         let mut bank0 = self.ll.bank::<0>();
         let count_h = bank0.fifo_counth().read().unwrap().fifo_count_15_8();
         let count_l = bank0.fifo_countl().read().unwrap().fifo_count_7_0();
