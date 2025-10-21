@@ -24,4 +24,5 @@ async-std = { version = "1.12.*", features = ["attributes"] }
 [features]
 default = []
 async = ["dep:embedded-hal-async"]
+defmt = ["dep:defmt"]
 blocking = []
