@@ -10,7 +10,7 @@ repository = "https://github.com/ProfFan/icm426xx"
 
 [dependencies]
 embedded-hal = "1.0.*"
-defmt = "0.3.*"
+defmt = { version = "0.3.*", optional = true }
 paste = "1.0.*"
 bilge = { version = "0.2.*", default-features = false }
 bytemuck = { version = ">=1.16.0,<2.0.0", features = ["derive"] }
@@ -24,4 +24,5 @@ async-std = { version = "1.12.*", features = ["attributes"] }
 [features]
 default = []
 async = ["dep:embedded-hal-async"]
+defmt = ["dep:defmt"]
 blocking = []

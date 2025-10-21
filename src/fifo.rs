@@ -1,6 +1,5 @@
 use bilge::prelude::*;
 use bytemuck::{AnyBitPattern, NoUninit};
-use defmt::Format;
 
 #[bitsize(8)]
 #[derive(DebugBits, FromBits, PartialEq)]
@@ -14,6 +13,7 @@ pub struct FifoHeader {
     header_msg: u1, // 1: FIFO is empty
 }
 
+#[cfg(feature = "defmt")]
 impl defmt::Format for FifoHeader {
     fn format(&self, f: defmt::Formatter) {
         defmt::write!(f, "FifoHeader {{ header_msg: {}, has_accel: {}, has_gyro: {}, has_20bit: {}, has_timestamp_fsync: {}, odr_changed_accel: {}, odr_changed_gyro: {} }}",
@@ -28,8 +28,9 @@ impl defmt::Format for FifoHeader {
     }
 }
 
-#[derive(Debug, Clone, Copy, Format, PartialEq, NoUninit, AnyBitPattern, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, NoUninit, AnyBitPattern, Default)]
 #[repr(C)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoPacket4 {
     pub fifo_header: u8,
     pub accel_data_x1: u8,      // Accel X [19:12]

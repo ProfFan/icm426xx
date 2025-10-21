@@ -6,7 +6,8 @@ use embedded_hal::spi::SpiDevice;
 
 use crate::{register_bank::Register, Ready, ICM42688};
 
-#[derive(Debug, defmt::Format, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoReadError;
 
 impl<SPI> ICM42688<SPI, Ready>

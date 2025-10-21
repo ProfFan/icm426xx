@@ -5,7 +5,8 @@ pub struct ICM42688<BUS> {
     current_bank: RegisterBank,
 }
 
-#[derive(Debug, defmt::Format)]
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct BankSelectionError;
 
 impl core::fmt::Display for BankSelectionError {

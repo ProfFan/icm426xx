@@ -223,7 +223,7 @@ where
 
 /// An SPI error that can occur when communicating with the LSM6DSO
 #[cfg(feature = "async")]
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<SPI>
 where
     SPI: async_spi::SpiDevice<u8>,
