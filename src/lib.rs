@@ -30,6 +30,9 @@ pub enum Error<BusError> {
     /// This indicates either the wrong device or a communication issue.
     /// The stored u8 indicates the returned response from the device.
     WhoAmIMismatch(u8),
+
+    /// A sample read did not result in a read sample.
+    NoSampleRead,
 }
 
 /// Helper trait to convert bus errors into our top-level Error::Bus variant.

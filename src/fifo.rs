@@ -1,6 +1,23 @@
 use bilge::prelude::*;
 use bytemuck::{AnyBitPattern, NoUninit};
 
+/// A single sample of sensor data read from the FIFO.
+///
+/// Each field is optional because a FIFO packet may not contain all types of
+/// data, depending on the sensor's configuration and the packet's header flags.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Sample {
+    /// Accelerometer data (X, Y, Z) in m/s^2.
+    pub accel: Option<(f32, f32, f32)>,
+    /// Gyroscope data (X, Y, Z) in radians per second.
+    pub gyro: Option<(f32, f32, f32)>,
+    /// Temperature data in degrees Celsius.
+    pub temperature_celsius: f32,
+    /// Timestamp of the sample. The unit is 16 µs.
+    pub timestamp: Option<u16>,
+}
+
 #[bitsize(8)]
 #[derive(DebugBits, FromBits, PartialEq)]
 pub struct FifoHeader {
@@ -11,14 +28,18 @@ pub struct FifoHeader {
                             * accel data packet
                             * compared to the previous accel
                             * packet */
-    has_timestamp_fsync: u2, // 10: Packet contains ODR Timestamp
-    has_20bit: u1,           /* 1: Packet has a new and valid sample of
-                              * extended 20-bit data for gyro and/or accel */
-    has_gyro: u1, /* 1: Packet is sized so that gyro data have location in
-                   * the packet, FIFO_GYRO_EN must be 1 */
-    has_accel: u1, /* 1: Packet is sized so that accel data have location in
-                    * the packet, FIFO_ACCEL_EN must be 1 */
-    header_msg: u1, // 1: FIFO is empty
+    pub(crate) has_timestamp_fsync: u2, // 10: Packet contains ODR Timestamp
+    has_20bit: u1,                      /* 1: Packet has a new and valid
+                                         * sample of
+                                         * extended 20-bit data for gyro
+                                         * and/or accel */
+    pub(crate) has_gyro: u1, /* 1: Packet is sized so that gyro data have
+                              * location in the
+                              * packet, FIFO_GYRO_EN must be 1 */
+    pub(crate) has_accel: u1, /* 1: Packet is sized so that accel data have
+                               * location in
+                               * the packet, FIFO_ACCEL_EN must be 1 */
+    pub(crate) header_msg: u1, // 1: FIFO is empty
 }
 
 #[cfg(feature = "defmt")]
