@@ -8,7 +8,8 @@ use embedded_hal::delay::DelayNs;
 
 use crate::{Ready, Uninitialized, ICM42688};
 
-#[derive(Debug, defmt::Format, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InitializationError;
 
 impl<SPI> ICM42688<SPI, Uninitialized> {
