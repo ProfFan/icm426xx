@@ -14,6 +14,26 @@ pub struct Uninitialized;
 #[derive(Debug)]
 pub struct Ready;
 
+/// Represents all possible errors that can occur in the icm426xx driver.
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Error<BusError> {
+    /// An error occurred on the underlying communication bus.
+    Bus(BusError),
+
+    /// The 'Who Am I' check failed during initialization.
+    /// This indicates either the wrong device or a communication issue.
+    /// The stored u8 indicates the returned response from the device.
+    WhoAmIMismatch(u8),
+}
+
+/// Helper trait to convert bus errors into our top-level Error::Bus variant.
+impl<BusError> From<BusError> for Error<BusError> {
+    fn from(error: BusError) -> Self {
+        Error::Bus(error)
+    }
+}
+
 /// ICM42688 top-level driver
 ///
 /// Usage:

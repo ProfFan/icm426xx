@@ -4,12 +4,20 @@ use bytemuck::{AnyBitPattern, NoUninit};
 #[bitsize(8)]
 #[derive(DebugBits, FromBits, PartialEq)]
 pub struct FifoHeader {
-    odr_changed_gyro: u1, // 1: The ODR for gyro is different for this gyro data packet compared to the previous gyro packet
-    odr_changed_accel: u1, // 1: The ODR for accel is different for this accel data packet compared to the previous accel packet
+    odr_changed_gyro: u1, /* 1: The ODR for gyro is different for this gyro
+                           * data packet compared to the previous gyro
+                           * packet */
+    odr_changed_accel: u1, /* 1: The ODR for accel is different for this
+                            * accel data packet
+                            * compared to the previous accel
+                            * packet */
     has_timestamp_fsync: u2, // 10: Packet contains ODR Timestamp
-    has_20bit: u1, // 1: Packet has a new and valid sample of extended 20-bit data for gyro and/or accel
-    has_gyro: u1, // 1: Packet is sized so that gyro data have location in the packet, FIFO_GYRO_EN must be 1
-    has_accel: u1, // 1: Packet is sized so that accel data have location in the packet, FIFO_ACCEL_EN must be 1
+    has_20bit: u1,           /* 1: Packet has a new and valid sample of
+                              * extended 20-bit data for gyro and/or accel */
+    has_gyro: u1, /* 1: Packet is sized so that gyro data have location in
+                   * the packet, FIFO_GYRO_EN must be 1 */
+    has_accel: u1, /* 1: Packet is sized so that accel data have location in
+                    * the packet, FIFO_ACCEL_EN must be 1 */
     header_msg: u1, // 1: FIFO is empty
 }
 
@@ -60,7 +68,12 @@ impl FifoPacket4 {
     }
 
     #[inline]
-    fn convert_parts_to_20bit(&self, high_8: u8, low_8: u8, ext_low_4: u8) -> i32 {
+    fn convert_parts_to_20bit(
+        &self,
+        high_8: u8,
+        low_8: u8,
+        ext_low_4: u8,
+    ) -> i32 {
         let high_12 = (high_8 as u32) << 12;
         let low_12 = (low_8 as u32) << 4;
         let ext_4 = (ext_low_4 & 0xF) as u32;
@@ -79,32 +92,56 @@ impl FifoPacket4 {
 
     pub fn accel_data_x(&self) -> i32 {
         let ext_accel_x = (self.ext_accel_x_gyro_x & 0xF0) >> 4;
-        self.convert_parts_to_20bit(self.accel_data_x1, self.accel_data_x0, ext_accel_x)
+        self.convert_parts_to_20bit(
+            self.accel_data_x1,
+            self.accel_data_x0,
+            ext_accel_x,
+        )
     }
 
     pub fn accel_data_y(&self) -> i32 {
         let ext_accel_y = (self.ext_accel_y_gyro_y & 0xF0) >> 4;
-        self.convert_parts_to_20bit(self.accel_data_y1, self.accel_data_y0, ext_accel_y)
+        self.convert_parts_to_20bit(
+            self.accel_data_y1,
+            self.accel_data_y0,
+            ext_accel_y,
+        )
     }
 
     pub fn accel_data_z(&self) -> i32 {
         let ext_accel_z = (self.ext_accel_z_gyro_z & 0xF0) >> 4;
-        self.convert_parts_to_20bit(self.accel_data_z1, self.accel_data_z0, ext_accel_z)
+        self.convert_parts_to_20bit(
+            self.accel_data_z1,
+            self.accel_data_z0,
+            ext_accel_z,
+        )
     }
 
     pub fn gyro_data_x(&self) -> i32 {
         let ext_gyro_x = self.ext_accel_x_gyro_x & 0x0F;
-        self.convert_parts_to_20bit(self.gyro_data_x1, self.gyro_data_x0, ext_gyro_x)
+        self.convert_parts_to_20bit(
+            self.gyro_data_x1,
+            self.gyro_data_x0,
+            ext_gyro_x,
+        )
     }
 
     pub fn gyro_data_y(&self) -> i32 {
         let ext_gyro_y = self.ext_accel_y_gyro_y & 0x0F;
-        self.convert_parts_to_20bit(self.gyro_data_y1, self.gyro_data_y0, ext_gyro_y)
+        self.convert_parts_to_20bit(
+            self.gyro_data_y1,
+            self.gyro_data_y0,
+            ext_gyro_y,
+        )
     }
 
     pub fn gyro_data_z(&self) -> i32 {
         let ext_gyro_z = self.ext_accel_z_gyro_z & 0x0F;
-        self.convert_parts_to_20bit(self.gyro_data_z1, self.gyro_data_z0, ext_gyro_z)
+        self.convert_parts_to_20bit(
+            self.gyro_data_z1,
+            self.gyro_data_z0,
+            ext_gyro_z,
+        )
     }
 
     pub fn temperature_raw(&self) -> u16 {
@@ -117,4 +154,5 @@ impl FifoPacket4 {
 }
 
 // Assert that the size of the struct is 20 bytes
-const _SIZE_CHECK: usize = (core::mem::size_of::<FifoPacket4>() == 20) as usize - 1;
+const _SIZE_CHECK: usize =
+    (core::mem::size_of::<FifoPacket4>() == 20) as usize - 1;

@@ -1,7 +1,8 @@
 //! Register bank module
 //!
-//! The ICM42688P IMU has 5 register banks, and access to the registers is controlled by the
-//! BANK_SEL register. This module provides a type-safe interface to the register banks.
+//! The ICM42688P IMU has 5 register banks, and access to the registers is
+//! controlled by the BANK_SEL register. This module provides a type-safe
+//! interface to the register banks.
 #![allow(non_camel_case_types)]
 #![allow(unused)]
 #![allow(clippy::eq_op)]
@@ -76,7 +77,7 @@ where
     BUS: spi::SpiDevice<u8>,
 {
     /// Read from the register
-    pub fn read(&mut self) -> Result<R::Read, Error<BUS>>
+    pub fn read(&mut self) -> Result<R::Read, BUS::Error>
     where
         R: Register + Readable,
     {
@@ -84,16 +85,13 @@ where
         let buffer = R::buffer(&mut r);
 
         init_header::<R>(false, buffer);
-        self.0
-            .bus
-            .transfer_in_place(buffer)
-            .map_err(Error::Transfer)?;
+        self.0.bus.transfer_in_place(buffer)?;
 
         Ok(r)
     }
 
     /// Write to the register
-    pub fn write<F>(&mut self, f: F) -> Result<(), Error<BUS>>
+    pub fn write<F>(&mut self, f: F) -> Result<(), BUS::Error>
     where
         R: Register + Writable,
         F: FnOnce(&mut R::Write) -> &mut R::Write,
@@ -104,13 +102,13 @@ where
         let buffer = R::buffer(&mut w);
         init_header::<R>(true, buffer);
 
-        BUS::write(self.0.bus, buffer).map_err(Error::Transfer)?;
+        BUS::write(self.0.bus, buffer)?;
 
         Ok(())
     }
 
     /// Modify the register
-    pub fn modify<F>(&mut self, f: F) -> Result<(), Error<BUS>>
+    pub fn modify<F>(&mut self, f: F) -> Result<(), BUS::Error>
     where
         R: Register + Readable + Writable,
         F: for<'r> FnOnce(&mut R::Read, &'r mut R::Write) -> &'r mut R::Write,
@@ -118,14 +116,15 @@ where
         let mut r = self.read()?;
         let mut w = R::write();
 
-        <R as Writable>::buffer(&mut w).copy_from_slice(<R as Readable>::buffer(&mut r));
+        <R as Writable>::buffer(&mut w)
+            .copy_from_slice(<R as Readable>::buffer(&mut r));
 
         f(&mut r, &mut w);
 
         let buffer = <R as Writable>::buffer(&mut w);
         init_header::<R>(true, buffer);
 
-        BUS::write(self.0.bus, buffer).map_err(Error::Transfer)?;
+        BUS::write(self.0.bus, buffer)?;
 
         Ok(())
     }
@@ -138,7 +137,7 @@ where
     BUS: async_spi::SpiDevice<u8>,
 {
     /// Read from the register
-    pub async fn async_read(&mut self) -> Result<R::Read, Error<BUS>>
+    pub async fn async_read(&mut self) -> Result<R::Read, BUS::Error>
     where
         R: Register + Readable,
     {
@@ -147,14 +146,13 @@ where
 
         init_header::<R>(false, buffer);
         async_spi::SpiDevice::transfer_in_place(&mut self.0.bus, buffer)
-            .await
-            .map_err(|e| Error::Transfer(e))?;
+            .await?;
 
         Ok(r)
     }
 
     /// Write to the register
-    pub async fn async_write<F>(&mut self, f: F) -> Result<(), Error<BUS>>
+    pub async fn async_write<F>(&mut self, f: F) -> Result<(), BUS::Error>
     where
         R: Register + Writable,
         F: FnOnce(&mut R::Write) -> &mut R::Write,
@@ -165,15 +163,13 @@ where
         let buffer = R::buffer(&mut w);
         let _ = init_header::<R>(true, buffer);
 
-        async_spi::SpiDevice::write(&mut self.0.bus, buffer)
-            .await
-            .map_err(|e| Error::Transfer(e))?;
+        async_spi::SpiDevice::write(&mut self.0.bus, buffer).await?;
 
         Ok(())
     }
 
     /// Modify the register
-    pub async fn async_modify<F>(&mut self, f: F) -> Result<(), Error<BUS>>
+    pub async fn async_modify<F>(&mut self, f: F) -> Result<(), BUS::Error>
     where
         R: Register + Readable + Writable,
         F: for<'r> FnOnce(&mut R::Read, &'r mut R::Write) -> &'r mut R::Write,
@@ -181,67 +177,17 @@ where
         let mut r = self.async_read().await?;
         let mut w = R::write();
 
-        <R as Writable>::buffer(&mut w).copy_from_slice(<R as Readable>::buffer(&mut r));
+        <R as Writable>::buffer(&mut w)
+            .copy_from_slice(<R as Readable>::buffer(&mut r));
 
         f(&mut r, &mut w);
 
         let buffer = <R as Writable>::buffer(&mut w);
         let _ = init_header::<R>(true, buffer);
 
-        async_spi::SpiDevice::write(&mut self.0.bus, buffer)
-            .await
-            .map_err(Error::Transfer)?;
+        async_spi::SpiDevice::write(&mut self.0.bus, buffer).await?;
 
         Ok(())
-    }
-}
-
-/// An SPI error that can occur when communicating with the LSM6DSO
-#[cfg(not(feature = "async"))]
-pub enum Error<SPI>
-where
-    SPI: spi::SpiDevice<u8>,
-{
-    /// SPI error occured during a transfer transaction
-    Transfer(SPI::Error),
-}
-
-// We can't derive this implementation, as the compiler will complain that the
-// associated error type doesn't implement `Debug`.
-#[cfg(not(feature = "async"))]
-impl<SPI> fmt::Debug for Error<SPI>
-where
-    SPI: spi::SpiDevice<u8>,
-    SPI::Error: fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::Transfer(error) => write!(f, "Transfer({:?})", error),
-        }
-    }
-}
-
-/// An SPI error that can occur when communicating with the LSM6DSO
-#[cfg(feature = "async")]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum Error<SPI>
-where
-    SPI: async_spi::SpiDevice<u8>,
-{
-    /// SPI error occured during a transfer transaction
-    Transfer(SPI::Error),
-}
-
-#[cfg(feature = "async")]
-impl<SPI> fmt::Debug for Error<SPI>
-where
-    SPI: async_spi::SpiDevice<u8>,
-    SPI::Error: fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::Transfer(error) => write!(f, "Transfer({:?})", error),
-        }
     }
 }
 
