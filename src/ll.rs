@@ -41,7 +41,9 @@ impl<BUS> ICM42688<BUS> {
         self.current_bank
     }
 
-    pub fn bank<const BANK: RegisterBank>(&mut self) -> Registers<BUS, BANK> {
+    pub fn bank<const BANK: RegisterBank>(
+        &mut self,
+    ) -> Registers<'_, BUS, BANK> {
         if self.current_bank != BANK {
             panic!("Bank mismatch")
         }
