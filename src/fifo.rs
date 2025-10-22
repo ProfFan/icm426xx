@@ -1,6 +1,26 @@
 use bilge::prelude::*;
 use bytemuck::{AnyBitPattern, NoUninit};
 
+/// The type of timestamp provided in Sample.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Timestamp {
+    /// No timestamp provided.
+    None,
+    /// Datasheet: Packet contains ODR timestamp, with 16µs resolution. The
+    /// timestamp is absolute and monotonically increases. To compute
+    /// deltas between packets or perform unwrapping, use two-complement
+    /// subtraction.
+    OdrTimestamp(u16),
+    /// Datasheet: Packet contains FSYNC time, and this packet is flagged as
+    /// first ODR after FSYNC (only if FIFO_TMST_FSYNC_EN).
+    ///
+    /// This implementation does not configure FIFO_TMST_FSYNC_EN as 1, so
+    /// getting this response is unexpected.
+    /// The unit is unclear from the data sheet.
+    FsyncTimestamp(u16),
+}
+
 /// A single sample of sensor data read from the FIFO.
 ///
 /// Each field is optional because a FIFO packet may not contain all types of
@@ -14,8 +34,8 @@ pub struct Sample {
     pub gyro: Option<(f32, f32, f32)>,
     /// Temperature data in degrees Celsius.
     pub temperature_celsius: f32,
-    /// Timestamp of the sample. The unit is 16 µs.
-    pub timestamp: Option<u16>,
+    /// Timestamp of the sample.
+    pub timestamp: Timestamp,
 }
 
 #[bitsize(8)]
@@ -28,11 +48,16 @@ pub struct FifoHeader {
                             * accel data packet
                             * compared to the previous accel
                             * packet */
-    pub(crate) has_timestamp_fsync: u2, // 10: Packet contains ODR Timestamp
-    has_20bit: u1,                      /* 1: Packet has a new and valid
-                                         * sample of
-                                         * extended 20-bit data for gyro
-                                         * and/or accel */
+    pub(crate) has_timestamp_fsync: u2, /* 10: Packet contains ODR
+                                         * Timestamp;
+                                         * 11: Packet contains FSYNC time,
+                                         * and this packet is flagged as
+                                         * first ODR after FSYNC (only if
+                                         * FIFO_TMST_FSYNC_EN is 1) */
+    has_20bit: u1, /* 1: Packet has a new and valid
+                    * sample of
+                    * extended 20-bit data for gyro
+                    * and/or accel */
     pub(crate) has_gyro: u1, /* 1: Packet is sized so that gyro data have
                               * location in the
                               * packet, FIFO_GYRO_EN must be 1 */
@@ -169,8 +194,14 @@ impl FifoPacket4 {
         ((self.temp_data1 as u16) << 8) | self.temp_data0 as u16
     }
 
-    pub fn timestamp(&self) -> u16 {
-        ((self.timestamp_h as u16) << 8) | self.timestamp_l as u16
+    pub fn timestamp(&self) -> Timestamp {
+        let timestamp =
+            ((self.timestamp_h as u16) << 8) | self.timestamp_l as u16;
+        match self.fifo_header().has_timestamp_fsync().value() {
+            0b10 => Timestamp::OdrTimestamp(timestamp),
+            0b11 => Timestamp::FsyncTimestamp(timestamp),
+            0b00 | 0b01 | _ => Timestamp::None,
+        }
     }
 }
 

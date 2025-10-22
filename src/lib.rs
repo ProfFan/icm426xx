@@ -8,6 +8,7 @@ pub mod register_bank;
 pub mod uninitialized;
 
 // Reexports.
+pub use fifo::{Sample, Timestamp};
 pub use uninitialized::{
     Config, InterruptMode, InterruptPolarity, OutputDataRate,
 };

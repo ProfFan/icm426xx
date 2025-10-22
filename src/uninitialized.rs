@@ -230,11 +230,13 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .accel_config1()
             .async_modify(|_, w| w.accel_ui_filt_ord(0b0))
             .await?;
+        // To support occasional packet dropping, we configure timestamping
+        // without deltas and leave delta computation to the user.
         bank0
             .tmst_config()
             .async_modify(|_, w| {
                 w.tmst_en(1)
-                    .tmst_delta_en(1)
+                    .tmst_delta_en(0)
                     .tmst_to_regs_en(1)
                     .tmst_res(1)
                     .tmst_fsync_en(0)
@@ -342,7 +344,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         self.ll
             .bank::<0>()
             .pwr_mgmt0()
-            .async_modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))
+            .async_modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11).temp_dis(0))
             .await?;
 
         // Delay for 200us per the datasheet after writing to PWR_MGMT0
@@ -416,9 +418,11 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         bank0
             .accel_config1()
             .modify(|_, w| w.accel_ui_filt_ord(0b0))?;
+        // To support occasional packet dropping, we configure timestamping
+        // without deltas and leave delta computation to the user.
         bank0.tmst_config().modify(|_, w| {
             w.tmst_en(1)
-                .tmst_delta_en(1)
+                .tmst_delta_en(0)
                 .tmst_to_regs_en(1)
                 .tmst_res(1)
                 .tmst_fsync_en(0)
@@ -492,7 +496,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         self.ll
             .bank::<0>()
             .pwr_mgmt0()
-            .modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))?;
+            .modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11).temp_dis(0))?;
 
         // Delay for 200us per the datasheet after writing to PWR_MGMT0
         delay.delay_us(200);

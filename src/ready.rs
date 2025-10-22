@@ -77,10 +77,12 @@ where
 
     #[cfg(feature = "async")]
     pub async fn read_sample(&mut self) -> Result<Sample, Error<SPI::Error>> {
-        // Read 1 extra packet in case the user has been slow in reading out samples.
-        let mut buffer = [0u8; 44];
+        // Read one extra packet (discarded) in case the user has been slow in
+        // reading out samples.
         // We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
-        // one go.
+        // one go. The leading byte in the buffer is used to signal register
+        // address, it's output doesn't contain data on return.
+        let mut buffer = [0u8; 44];
         buffer[0] = crate::register_bank::bank0::INT_STATUS::ID | 0x80;
         self.ll.bus.transfer_in_place(&mut buffer).await?;
         let p = bytemuck::from_bytes::<FifoPacket4>(&buffer[4..24]);
@@ -89,6 +91,11 @@ where
 
     #[cfg(not(feature = "async"))]
     pub fn read_sample(&mut self) -> Result<Sample, Error<SPI::Error>> {
+        // Read one extra packet (discarded) in case the user has been slow in
+        // reading out samples.
+        // We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
+        // one go. The leading byte in the buffer is used to signal register
+        // address, it's output doesn't contain data on return.
         let mut buffer = [0u8; 44];
         buffer[0] = crate::register_bank::bank0::INT_STATUS::ID | 0x80;
         self.ll.bus.transfer_in_place(&mut buffer)?;
@@ -98,6 +105,7 @@ where
 
     fn sample_from_packet4(p: &FifoPacket4) -> Option<Sample> {
         (p.fifo_header().header_msg().value() == 0).then(|| {
+            const FULL_1SIDE_RANGE: f32 = (1 << 19) as f32;
             let gyro = (p.fifo_header().has_gyro().value() != 0).then(|| {
                 let gx = p.gyro_data_x();
                 let gy = p.gyro_data_y();
@@ -105,8 +113,9 @@ where
                 // Packet 4 => full scale reading.
                 // The signed 20-bit quantity corresponds to ±2000 degrees per
                 // second. 1 degree = π/180 radians.
-                let scale = core::f32::consts::PI / 180.0 * 2000.0f32
-                    / (1 << 19) as f32;
+                const FULL_SCALE_DPS: f32 = 2000.0;
+                let scale = core::f32::consts::PI / 180.0 * FULL_SCALE_DPS
+                    / FULL_1SIDE_RANGE;
                 (gx as f32 * scale, gy as f32 * scale, gz as f32 * scale)
             });
             let accel = (p.fifo_header().has_accel().value() != 0).then(|| {
@@ -115,23 +124,23 @@ where
                 let az = p.accel_data_z();
                 // Packet 4 => full scale reading.
                 // The signed 20-bit quantity corresponds to ±16g.
-                let std_gravity = 9.80665;
-                let scale = std_gravity * 16.0f32 / (1 << 19) as f32;
+                const STD_GRAVITY: f32 = 9.80665;
+                const FULL_SCALE_G: f32 = 16.0;
+                let scale = STD_GRAVITY * FULL_SCALE_G / FULL_1SIDE_RANGE;
                 (ax as f32 * scale, ay as f32 * scale, az as f32 * scale)
             });
             // Temperature is always provided.
-            let temp_scale = 1f32 / 2.07;
-            let temperature_celsius =
-                p.temperature_raw() as f32 * temp_scale + 25.0;
-            let timestamp = (p.fifo_header().has_timestamp_fsync().value()
-                != 0)
-                .then_some(p.timestamp());
+            // Using formula as stated in data sheet.
+            const TEMP_SENSITIVITY_LSB_PER_CELSIUS: f32 = 2.07;
+            let temperature_celsius = p.temperature_raw() as f32
+                / TEMP_SENSITIVITY_LSB_PER_CELSIUS
+                + 25.0;
 
             Sample {
                 accel,
                 gyro,
                 temperature_celsius,
-                timestamp,
+                timestamp: p.timestamp(),
             }
         })
     }
