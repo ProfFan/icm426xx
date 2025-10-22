@@ -7,6 +7,11 @@ pub mod ready;
 pub mod register_bank;
 pub mod uninitialized;
 
+// Reexports.
+pub use uninitialized::{
+    Config, InterruptMode, InterruptPolarity, OutputDataRate,
+};
+
 #[derive(Debug)]
 pub struct Uninitialized;
 

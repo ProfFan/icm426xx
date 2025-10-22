@@ -1,5 +1,5 @@
-//! This example runs on the ESP32-S3-DevKitC-1 board, wired to a ICM-42688-P via SPI
-//! It demonstrates simple IMU data read functionality.
+//! This example runs on the ESP32-S3-DevKitC-1 board, wired to a ICM-42688-P
+//! via SPI It demonstrates simple IMU data read functionality.
 #![no_std]
 #![no_main]
 
@@ -21,13 +21,16 @@ use icm426xx::fifo::FifoPacket4;
 #[esp_hal_embassy::main]
 async fn main(_spawner: Spawner) {
     // Set up ESP32
-    let peripherals = esp_hal::init(esp_hal::Config::default().with_cpu_clock(CpuClock::max()));
+    let peripherals = esp_hal::init(
+        esp_hal::Config::default().with_cpu_clock(CpuClock::max()),
+    );
     let timer_group = TimerGroup::new(peripherals.TIMG0);
 
     esp_hal_embassy::init(timer_group.timer1);
 
     // Initialize SPI
-    let cs = Output::new(peripherals.GPIO4, Level::High, OutputConfig::default());
+    let cs =
+        Output::new(peripherals.GPIO4, Level::High, OutputConfig::default());
 
     let spi = Spi::new(
         peripherals.SPI2,
@@ -42,10 +45,16 @@ async fn main(_spawner: Spawner) {
     .into_async();
 
     let spi_bus = Mutex::<CriticalSectionRawMutex, _>::new(spi);
-    let spi_device = embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice::new(&spi_bus, cs);
+    let spi_device =
+        embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice::new(
+            &spi_bus, cs,
+        );
 
     let icm = icm426xx::ICM42688::new(spi_device);
-    let mut icm = icm.initialize(Delay).await.unwrap();
+    let mut icm = icm
+        .initialize(Delay, icm426xx::Config::default())
+        .await
+        .unwrap();
     let mut bank = icm.ll().bank::<{ icm426xx::register_bank::BANK0 }>();
 
     let who_am_i = bank.who_am_i().async_read().await.unwrap();
@@ -77,7 +86,8 @@ async fn main(_spawner: Spawner) {
             // Scale to human units:
             let gyro_lsb = 250.0f32 / (1 << 19) as f32;
 
-            // Uncomment the following block to acquire and print raw acceleration values
+            // Uncomment the following block to acquire and print raw
+            // acceleration values
             /*
             let ax_raw = pkt.accel_data_x();
             let ay_raw = pkt.accel_data_y();
