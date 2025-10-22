@@ -52,7 +52,7 @@ async fn main(_spawner: Spawner) {
 
     let icm = icm426xx::ICM42688::new(spi_device);
     let mut icm = icm
-        .initialize(Delay, icm426xx::uninitialized::Config::default())
+        .initialize(Delay, icm426xx::Config::default())
         .await
         .unwrap();
     let mut bank = icm.ll().bank::<{ icm426xx::register_bank::BANK0 }>();

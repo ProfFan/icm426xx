@@ -8,10 +8,9 @@ pub mod register_bank;
 pub mod uninitialized;
 
 // Reexports.
-pub use uninitialized::Config;
-pub use uninitialized::InterruptMode;
-pub use uninitialized::InterruptPolarity;
-pub use uninitialized::OutputDataRate;
+pub use uninitialized::{
+    Config, InterruptMode, InterruptPolarity, OutputDataRate,
+};
 
 #[derive(Debug)]
 pub struct Uninitialized;

@@ -8,17 +8,32 @@ use embedded_hal::delay::DelayNs;
 
 use crate::{Error, Ready, Uninitialized, ICM42688};
 
+/// Determines how the interrupt signal is generated.
+///
+/// - `Pulsed`: The interrupt signal is a short pulse when the event occurs.
+/// - `Latched`: The interrupt signal remains active until it is cleared by
+///   software.
 pub enum InterruptMode {
+    /// Interrupt signal is a short pulse when the event occurs. This
+    /// configuration can lead to race conditions if a configured interrupt
+    /// handler isn't always installed.
     Pulsed,
+    /// Interrupt signal remains active until cleared by software.
     Latched,
 }
-
+/// Sets the active level of the interrupt signal.
+///
+/// - `ActiveHigh`: Interrupt is signaled by a high logic level.
+/// - `ActiveLow`: Interrupt is signaled by a low logic level.
 pub enum InterruptPolarity {
+    /// Interrupt is signaled by a high logic level.
     ActiveHigh,
+    /// Interrupt is signaled by a low logic level.
     ActiveLow,
 }
 
-/// The code uses the same rate for both gyro and accelerometer.
+/// Sensor output data rate. The code uses the same rate for both gyro and
+/// accelerometer.
 #[derive(Copy, Clone)]
 pub enum OutputDataRate {
     Hz32000,
@@ -41,10 +56,17 @@ struct AafConfig {
     bitshift: u8,
 }
 
-/// Configuration for the sensor.
+/// Configuration for the ICM42688 sensor during initialization.
+///
+/// This struct is used to set up various parameters of the sensor, such as
+/// interrupt behavior and the output data rate. An instance with default values
+/// can be created with `Config::default()`.
 pub struct Config {
+    /// The mode of the INT1 interrupt pin.
     pub int1_mode: InterruptMode,
+    /// The polarity of the INT1 interrupt pin.
     pub int1_polarity: InterruptPolarity,
+    /// The output data rate for both the accelerometer and gyroscope.
     pub rate: OutputDataRate,
 }
 
@@ -53,7 +75,7 @@ impl Default for Config {
         Self {
             int1_mode: InterruptMode::Latched,
             int1_polarity: InterruptPolarity::ActiveHigh,
-            rate: OutputDataRate::Hz12_5,
+            rate: OutputDataRate::Hz200,
         }
     }
 }
