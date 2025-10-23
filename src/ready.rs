@@ -76,31 +76,77 @@ where
     }
 
     #[cfg(feature = "async")]
-    pub async fn read_sample(&mut self) -> Result<Sample, Error<SPI::Error>> {
-        // Read one extra packet (discarded) in case the user has been slow in
-        // reading out samples.
+    /// Reads and parses a single sample from the FIFO.
+    ///
+    /// This function performs an efficient single SPI transaction to read the
+    /// interrupt status, FIFO count, and the next available FIFO packet. It
+    /// then parses this packet into a [`Sample`].
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some((sample, more_data)))`: On a successful read and parse.
+    ///   - `sample`: The [`Sample`] containing sensor data.
+    ///   - `more_data`: A boolean flag that is `true` if the FIFO contains more
+    ///     packets to be read.
+    /// - `Ok(None)`: If the FIFO was empty or the packet read was invalid
+    ///   (e.g., an "empty" marker).
+    /// - `Err(Error::Bus(_))`: If a communication error occurs on the SPI bus.
+    pub async fn read_sample(
+        &mut self,
+    ) -> Result<Option<(Sample, bool)>, Error<SPI::Error>> {
         // We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
         // one go. The leading byte in the buffer is used to signal register
         // address, it's output doesn't contain data on return.
-        let mut buffer = [0u8; 44];
+        let mut buffer = [0u8; 4 + core::mem::size_of::<FifoPacket4>()];
         buffer[0] = crate::register_bank::bank0::INT_STATUS::ID | 0x80;
         self.ll.bus.transfer_in_place(&mut buffer).await?;
+        // Buffer now contains [0, INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, DATA,
+        // DATA, ...]
         let p = bytemuck::from_bytes::<FifoPacket4>(&buffer[4..24]);
-        Self::sample_from_packet4(p).ok_or(Error::NoSampleRead)
+        let fifo_count = ((buffer[2] as u16) << 8) | (buffer[3] as u16);
+        Ok(Self::sample_from_packet4(p).map(|sample| {
+            (
+                sample,
+                fifo_count > core::mem::size_of::<FifoPacket4>() as u16,
+            )
+        }))
     }
 
     #[cfg(not(feature = "async"))]
-    pub fn read_sample(&mut self) -> Result<Sample, Error<SPI::Error>> {
-        // Read one extra packet (discarded) in case the user has been slow in
-        // reading out samples.
+    /// Reads and parses a single sample from the FIFO.
+    ///
+    /// This function performs an efficient single SPI transaction to read the
+    /// interrupt status, FIFO count, and the next available FIFO packet. It
+    /// then parses this packet into a [`Sample`].
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some((sample, more_data)))`: On a successful read and parse.
+    ///   - `sample`: The [`Sample`] containing sensor data.
+    ///   - `more_data`: A boolean flag that is `true` if the FIFO contains more
+    ///     packets to be read.
+    /// - `Ok(None)`: If the FIFO was empty or the packet read was invalid
+    ///   (e.g., an "empty" marker).
+    /// - `Err(Error::Bus(_))`: If a communication error occurs on the SPI bus.
+    pub fn read_sample(
+        &mut self,
+    ) -> Result<Option<(Sample, bool)>, Error<SPI::Error>> {
         // We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
         // one go. The leading byte in the buffer is used to signal register
         // address, it's output doesn't contain data on return.
-        let mut buffer = [0u8; 44];
+        let mut buffer = [0u8; 4 + core::mem::size_of::<FifoPacket4>()];
         buffer[0] = crate::register_bank::bank0::INT_STATUS::ID | 0x80;
         self.ll.bus.transfer_in_place(&mut buffer)?;
+        // Buffer now contains [0, INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, DATA,
+        // DATA, ...]
         let p = bytemuck::from_bytes::<FifoPacket4>(&buffer[4..24]);
-        Self::sample_from_packet4(p).ok_or(Error::NoSampleRead)
+        let fifo_count = ((buffer[2] as u16) << 8) | (buffer[3] as u16);
+        Ok(Self::sample_from_packet4(p).map(|sample| {
+            (
+                sample,
+                fifo_count > core::mem::size_of::<FifoPacket4>() as u16,
+            )
+        }))
     }
 
     fn sample_from_packet4(p: &FifoPacket4) -> Option<Sample> {
