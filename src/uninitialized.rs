@@ -68,6 +68,16 @@ pub struct Config {
     pub int1_polarity: InterruptPolarity,
     /// The output data rate for both the accelerometer and gyroscope.
     pub rate: OutputDataRate,
+    /// Configures the nature of timestamps in [`Sample`]s.
+    ///
+    /// See `Timestamp::OdrTimestamp` for more details.
+    ///
+    /// - `true`: Timestamps are absolute. Each consecutive sample's timestamp
+    ///   will monotonically increase, wrapping on the `u16` boundary.
+    /// - `false` (default): Timestamps represent the delta of time since the
+    ///   last Output Data Rate (ODR) event. This corresponds to the
+    ///   `TMST_DELTA_EN` register setting.
+    pub timestamps_are_absolute: bool,
 }
 
 impl Default for Config {
@@ -76,6 +86,7 @@ impl Default for Config {
             int1_mode: InterruptMode::Latched,
             int1_polarity: InterruptPolarity::ActiveHigh,
             rate: OutputDataRate::Hz200,
+            timestamps_are_absolute: false,
         }
     }
 }
@@ -236,7 +247,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .tmst_config()
             .async_modify(|_, w| {
                 w.tmst_en(1)
-                    .tmst_delta_en(0)
+                    .tmst_delta_en((!config.timestamps_are_absolute) as u8)
                     .tmst_to_regs_en(1)
                     .tmst_res(1)
                     .tmst_fsync_en(0)
@@ -422,7 +433,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         // without deltas and leave delta computation to the user.
         bank0.tmst_config().modify(|_, w| {
             w.tmst_en(1)
-                .tmst_delta_en(0)
+                .tmst_delta_en((!config.timestamps_are_absolute) as u8)
                 .tmst_to_regs_en(1)
                 .tmst_res(1)
                 .tmst_fsync_en(0)

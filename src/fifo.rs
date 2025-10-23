@@ -7,17 +7,29 @@ use bytemuck::{AnyBitPattern, NoUninit};
 pub enum Timestamp {
     /// No timestamp provided.
     None,
-    /// Datasheet: Packet contains ODR timestamp, with 16µs resolution. The
-    /// timestamp is absolute and monotonically increases. To compute
-    /// deltas between packets or perform unwrapping, use two-complement
-    /// subtraction.
+    /// Packet contains an ODR (Output Data Rate) timestamp with 16µs
+    /// resolution.
+    ///
+    /// The nature of this timestamp (absolute vs. delta) is determined by the
+    /// [`Config::timestamps_are_absolute`](crate::Config::timestamps_are_absolute) setting during initialization.
+    ///
+    /// - If `timestamps_are_absolute` is `true`, this is an absolute,
+    ///   monotonically increasing timestamp that wraps around on the `u16`
+    ///   boundary. To compute deltas between packets or perform unwrapping,
+    ///   use two's-complement
+    //    subtraction (e.g., `(new.wrapping_sub(old)) as i16`).
+    ///
+    /// - If `timestamps_are_absolute` is `false` (the default), this value
+    ///   represents the time delta since the last ODR.
     OdrTimestamp(u16),
-    /// Datasheet: Packet contains FSYNC time, and this packet is flagged as
-    /// first ODR after FSYNC (only if FIFO_TMST_FSYNC_EN).
+    /// Packet contains an FSYNC timestamp.
+    ///
+    /// This indicates the time of an FSYNC event and flags the packet as the
+    /// first ODR after FSYNC. This is only enabled if `FIFO_TMST_FSYNC_EN` is
+    /// set.
     ///
     /// This implementation does not configure FIFO_TMST_FSYNC_EN as 1, so
     /// getting this response is unexpected.
-    /// The unit is unclear from the data sheet.
     FsyncTimestamp(u16),
 }
 
