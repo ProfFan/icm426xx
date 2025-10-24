@@ -31,6 +31,11 @@ pub enum Error<BusError> {
     /// This indicates either the wrong device or a communication issue.
     /// The stored u8 indicates the returned response from the device.
     WhoAmIMismatch(u8),
+
+    /// The code has been to slow in reading samples out of the FIFO. The
+    /// user is recommended to mitigate by restarting the device if this
+    /// happens.
+    FifoOverflow,
 }
 
 /// Helper trait to convert bus errors into our top-level Error::Bus variant.
