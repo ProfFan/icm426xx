@@ -102,7 +102,7 @@ where
         self.ll.bus.transfer_in_place(&mut buffer).await?;
         // Buffer now contains [0, INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, DATA,
         // DATA, ...]
-        let int_status = int_status::R([buffer[1], 1]);
+        let int_status = int_status::R([0, buffer[1]]);
         if int_status.fifo_full_int() != 0 {
             return Err(Error::FifoOverflow);
         }
@@ -143,7 +143,7 @@ where
         self.ll.bus.transfer_in_place(&mut buffer)?;
         // Buffer now contains [0, INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, DATA,
         // DATA, ...]
-        let int_status = int_status::R([buffer[1], 1]);
+        let int_status = int_status::R([0, buffer[1]]);
         if int_status.fifo_full_int() != 0 {
             return Err(Error::FifoOverflow);
         }

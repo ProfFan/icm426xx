@@ -241,8 +241,6 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .accel_config1()
             .async_modify(|_, w| w.accel_ui_filt_ord(0b0))
             .await?;
-        // To support occasional packet dropping, we configure timestamping
-        // without deltas and leave delta computation to the user.
         bank0
             .tmst_config()
             .async_modify(|_, w| {
@@ -429,8 +427,6 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         bank0
             .accel_config1()
             .modify(|_, w| w.accel_ui_filt_ord(0b0))?;
-        // To support occasional packet dropping, we configure timestamping
-        // without deltas and leave delta computation to the user.
         bank0.tmst_config().modify(|_, w| {
             w.tmst_en(1)
                 .tmst_delta_en((!config.timestamps_are_absolute) as u8)
