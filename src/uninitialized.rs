@@ -68,6 +68,16 @@ pub struct Config {
     pub int1_polarity: InterruptPolarity,
     /// The output data rate for both the accelerometer and gyroscope.
     pub rate: OutputDataRate,
+    /// Configures the nature of timestamps in [`Sample`]s.
+    ///
+    /// See `Timestamp::OdrTimestamp` for more details.
+    ///
+    /// - `true`: Timestamps are absolute. Each consecutive sample's timestamp
+    ///   will monotonically increase, wrapping on the `u16` boundary.
+    /// - `false` (default): Timestamps represent the delta of time since the
+    ///   last Output Data Rate (ODR) event. This corresponds to the
+    ///   `TMST_DELTA_EN` register setting.
+    pub timestamps_are_absolute: bool,
 }
 
 impl Default for Config {
@@ -76,6 +86,7 @@ impl Default for Config {
             int1_mode: InterruptMode::Latched,
             int1_polarity: InterruptPolarity::ActiveHigh,
             rate: OutputDataRate::Hz200,
+            timestamps_are_absolute: false,
         }
     }
 }
@@ -234,7 +245,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .tmst_config()
             .async_modify(|_, w| {
                 w.tmst_en(1)
-                    .tmst_delta_en(1)
+                    .tmst_delta_en((!config.timestamps_are_absolute) as u8)
                     .tmst_to_regs_en(1)
                     .tmst_res(1)
                     .tmst_fsync_en(0)
@@ -342,7 +353,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         self.ll
             .bank::<0>()
             .pwr_mgmt0()
-            .async_modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))
+            .async_modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11).temp_dis(0))
             .await?;
 
         // Delay for 200us per the datasheet after writing to PWR_MGMT0
@@ -418,7 +429,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .modify(|_, w| w.accel_ui_filt_ord(0b0))?;
         bank0.tmst_config().modify(|_, w| {
             w.tmst_en(1)
-                .tmst_delta_en(1)
+                .tmst_delta_en((!config.timestamps_are_absolute) as u8)
                 .tmst_to_regs_en(1)
                 .tmst_res(1)
                 .tmst_fsync_en(0)
@@ -492,7 +503,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         self.ll
             .bank::<0>()
             .pwr_mgmt0()
-            .modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11))?;
+            .modify(|_, w| w.gyro_mode(0b11).accel_mode(0b11).temp_dis(0))?;
 
         // Delay for 200us per the datasheet after writing to PWR_MGMT0
         delay.delay_us(200);
