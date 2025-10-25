@@ -1,6 +1,55 @@
 use bilge::prelude::*;
 use bytemuck::{AnyBitPattern, NoUninit};
 
+/// The type of timestamp provided in Sample.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Timestamp {
+    /// No timestamp provided.
+    None,
+    /// Packet contains an ODR (Output Data Rate) timestamp with 16µs
+    /// resolution.
+    ///
+    /// The nature of this timestamp (absolute vs. delta) is determined by the
+    /// [`Config::timestamps_are_absolute`](crate::Config::timestamps_are_absolute) setting during initialization.
+    ///
+    /// - If `timestamps_are_absolute` is `true`, this is an absolute,
+    ///   monotonically increasing timestamp that wraps around on the `u16`
+    ///   boundary. To compute deltas between packets or perform unwrapping,
+    ///   use two's-complement
+    //    subtraction (e.g., `(new.wrapping_sub(old)) as i16`).
+    ///
+    /// - If `timestamps_are_absolute` is `false` (the default), this value
+    ///   represents the time delta since the last ODR.
+    OdrTimestamp(u16),
+    /// Packet contains an FSYNC timestamp.
+    ///
+    /// This indicates the time of an FSYNC event and flags the packet as the
+    /// first ODR after FSYNC. This is only enabled if `FIFO_TMST_FSYNC_EN` is
+    /// set.
+    ///
+    /// This implementation does not configure FIFO_TMST_FSYNC_EN as 1, so
+    /// getting this response is unexpected.
+    FsyncTimestamp(u16),
+}
+
+/// A single sample of sensor data read from the FIFO.
+///
+/// Each field is optional because a FIFO packet may not contain all types of
+/// data, depending on the sensor's configuration and the packet's header flags.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Sample {
+    /// Accelerometer data (X, Y, Z) in m/s^2.
+    pub accel: Option<(f32, f32, f32)>,
+    /// Gyroscope data (X, Y, Z) in radians per second.
+    pub gyro: Option<(f32, f32, f32)>,
+    /// Temperature data in degrees Celsius.
+    pub temperature_celsius: f32,
+    /// Timestamp of the sample.
+    pub timestamp: Timestamp,
+}
+
 #[bitsize(8)]
 #[derive(DebugBits, FromBits, PartialEq)]
 pub struct FifoHeader {
@@ -11,14 +60,23 @@ pub struct FifoHeader {
                             * accel data packet
                             * compared to the previous accel
                             * packet */
-    has_timestamp_fsync: u2, // 10: Packet contains ODR Timestamp
-    has_20bit: u1,           /* 1: Packet has a new and valid sample of
-                              * extended 20-bit data for gyro and/or accel */
-    has_gyro: u1, /* 1: Packet is sized so that gyro data have location in
-                   * the packet, FIFO_GYRO_EN must be 1 */
-    has_accel: u1, /* 1: Packet is sized so that accel data have location in
-                    * the packet, FIFO_ACCEL_EN must be 1 */
-    header_msg: u1, // 1: FIFO is empty
+    pub(crate) has_timestamp_fsync: u2, /* 10: Packet contains ODR
+                                         * Timestamp;
+                                         * 11: Packet contains FSYNC time,
+                                         * and this packet is flagged as
+                                         * first ODR after FSYNC (only if
+                                         * FIFO_TMST_FSYNC_EN is 1) */
+    has_20bit: u1, /* 1: Packet has a new and valid
+                    * sample of
+                    * extended 20-bit data for gyro
+                    * and/or accel */
+    pub(crate) has_gyro: u1, /* 1: Packet is sized so that gyro data have
+                              * location in the
+                              * packet, FIFO_GYRO_EN must be 1 */
+    pub(crate) has_accel: u1, /* 1: Packet is sized so that accel data have
+                               * location in
+                               * the packet, FIFO_ACCEL_EN must be 1 */
+    pub(crate) header_msg: u1, // 1: FIFO is empty
 }
 
 #[cfg(feature = "defmt")]
@@ -148,8 +206,14 @@ impl FifoPacket4 {
         ((self.temp_data1 as u16) << 8) | self.temp_data0 as u16
     }
 
-    pub fn timestamp(&self) -> u16 {
-        ((self.timestamp_h as u16) << 8) | self.timestamp_l as u16
+    pub fn timestamp(&self) -> Timestamp {
+        let timestamp =
+            ((self.timestamp_h as u16) << 8) | self.timestamp_l as u16;
+        match self.fifo_header().has_timestamp_fsync().value() {
+            0b10 => Timestamp::OdrTimestamp(timestamp),
+            0b11 => Timestamp::FsyncTimestamp(timestamp),
+            0b00 | 0b01 | _ => Timestamp::None,
+        }
     }
 }
 
