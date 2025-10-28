@@ -1,6 +1,6 @@
 [package]
 name = "icm426xx"
-version = "0.3.2"
+version = "0.4.0"
 edition = "2021"
 authors = ["Fan Jiang"]
 license = "MIT OR Apache-2.0"
@@ -10,15 +10,15 @@ repository = "https://github.com/ProfFan/icm426xx"
 
 [dependencies]
 embedded-hal = "1.0.*"
-defmt = { version = "0.3.*", optional = true }
+defmt = { version = ">=0.3.*,<2.0.0", optional = true }
 paste = "1.0.*"
-bilge = { version = "0.2.*", default-features = false }
+bilge = { version = ">=0.2.*", default-features = false }
 bytemuck = { version = ">=1.16.0,<2.0.0", features = ["derive"] }
 embedded-hal-async = { version = "1.0", optional = true }
 
 [dev-dependencies]
 embedded-hal-mock = { version = "0.11.*", features = ["embedded-hal-async"] }
-embedded-hal-bus = { version = "0.2.*", features = ["async"] }
+embedded-hal-bus = { version = ">=0.2.*", features = ["async"] }
 async-std = { version = "1.12.*", features = ["attributes"] }
 
 [features]

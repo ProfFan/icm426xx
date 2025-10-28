@@ -116,8 +116,7 @@ where
         let mut r = self.read()?;
         let mut w = R::write();
 
-        <R as Writable>::buffer(&mut w)
-            .copy_from_slice(<R as Readable>::buffer(&mut r));
+        <R as Writable>::buffer(&mut w).copy_from_slice(<R as Readable>::buffer(&mut r));
 
         f(&mut r, &mut w);
 
@@ -145,8 +144,7 @@ where
         let buffer = R::buffer(&mut r);
 
         init_header::<R>(false, buffer);
-        async_spi::SpiDevice::transfer_in_place(&mut self.0.bus, buffer)
-            .await?;
+        async_spi::SpiDevice::transfer_in_place(&mut self.0.bus, buffer).await?;
 
         Ok(r)
     }
@@ -177,8 +175,7 @@ where
         let mut r = self.async_read().await?;
         let mut w = R::write();
 
-        <R as Writable>::buffer(&mut w)
-            .copy_from_slice(<R as Readable>::buffer(&mut r));
+        <R as Writable>::buffer(&mut w).copy_from_slice(<R as Readable>::buffer(&mut r));
 
         f(&mut r, &mut w);
 

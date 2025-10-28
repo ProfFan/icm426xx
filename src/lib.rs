@@ -9,9 +9,7 @@ pub mod uninitialized;
 
 // Reexports.
 pub use fifo::{Sample, Timestamp};
-pub use uninitialized::{
-    Config, InterruptMode, InterruptPolarity, OutputDataRate,
-};
+pub use uninitialized::{Config, InterruptMode, InterruptPolarity, OutputDataRate};
 
 #[derive(Debug)]
 pub struct Uninitialized;

@@ -129,19 +129,18 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
     }
 
     fn get_aaf_config(odr: OutputDataRate) -> AafConfig {
-        let create_config =
-            |delt: u8, delt_sqr: u16, bitshift: u8| -> AafConfig {
-                AafConfig {
-                    delt,
-                    delt_sqr,
-                    bitshift,
-                }
-            };
+        let create_config = |delt: u8, delt_sqr: u16, bitshift: u8| -> AafConfig {
+            AafConfig {
+                delt,
+                delt_sqr,
+                bitshift,
+            }
+        };
         match odr {
             // Nyquist: 4000 Hz or higher. Highest available BW is 3979 Hz.
-            OutputDataRate::Hz32000
-            | OutputDataRate::Hz16000
-            | OutputDataRate::Hz8000 => create_config(63, 3968, 3),
+            OutputDataRate::Hz32000 | OutputDataRate::Hz16000 | OutputDataRate::Hz8000 => {
+                create_config(63, 3968, 3)
+            }
             // Nyquist: 2000 Hz. Choose BW: 1962 Hz.
             OutputDataRate::Hz4000 => create_config(37, 1376, 4),
             // Nyquist: 1000 Hz. Choose BW: 997 Hz.
@@ -206,9 +205,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
             .await?;
         bank0
             .intf_config0()
-            .async_modify(|_, w| {
-                w.fifo_count_endian(1).sensor_data_endian(1).ui_sifs_cfg(11)
-            })
+            .async_modify(|_, w| w.fifo_count_endian(1).sensor_data_endian(1).ui_sifs_cfg(11))
             .await?;
         // Disable AFSR (undocumented adaptive scale change)
         bank0
@@ -401,9 +398,9 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
                 .int1_mode(int1_mode)
         })?;
         bank0.fifo_config().modify(|_, w| w.fifo_mode(11))?;
-        bank0.intf_config0().modify(|_, w| {
-            w.fifo_count_endian(1).sensor_data_endian(1).ui_sifs_cfg(11)
-        })?;
+        bank0
+            .intf_config0()
+            .modify(|_, w| w.fifo_count_endian(1).sensor_data_endian(1).ui_sifs_cfg(11))?;
         // Disable AFSR (undocumented adaptive scale change)
         bank0.intf_config1().modify(|_, w| w.afsr(0b01))?;
 

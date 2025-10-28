@@ -19,10 +19,7 @@ impl core::fmt::Display for BankSelectionError {
 // impl core::error::Error for BankSelectionError {}
 
 pub trait BankSelectable {
-    fn set_bank(
-        &mut self,
-        bank: RegisterBank,
-    ) -> Result<(), BankSelectionError>;
+    fn set_bank(&mut self, bank: RegisterBank) -> Result<(), BankSelectionError>;
 }
 
 impl<BUS> ICM42688<BUS> {
@@ -41,9 +38,7 @@ impl<BUS> ICM42688<BUS> {
         self.current_bank
     }
 
-    pub fn bank<const BANK: RegisterBank>(
-        &mut self,
-    ) -> Registers<'_, BUS, BANK> {
+    pub fn bank<const BANK: RegisterBank>(&mut self) -> Registers<'_, BUS, BANK> {
         if self.current_bank != BANK {
             panic!("Bank mismatch")
         }
@@ -69,12 +64,8 @@ mod test {
     use alloc::vec;
 
     use embedded_hal_mock::eh1::digital::Mock as PinMock;
-    use embedded_hal_mock::eh1::digital::{
-        State as PinState, Transaction as PinTransaction,
-    };
-    use embedded_hal_mock::eh1::spi::{
-        Mock as SpiMock, Transaction as SpiTransaction,
-    };
+    use embedded_hal_mock::eh1::digital::{State as PinState, Transaction as PinTransaction};
+    use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
     #[test]
     fn test_bank_noop() {
@@ -82,11 +73,8 @@ mod test {
 
         let spi = SpiMock::new(expectations);
         let mut pin = PinMock::new(&[PinTransaction::set(PinState::High)]);
-        let spidev = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
-            spi,
-            pin.clone(),
-        )
-        .unwrap();
+        let spidev =
+            embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
         let mut icm = ICM42688::new(spidev);
         let _ = icm.bank::<BANK0>();
 
@@ -102,11 +90,8 @@ mod test {
 
         let spi = SpiMock::new(expectations);
         let mut pin = PinMock::new(&[PinTransaction::set(PinState::High)]);
-        let spidev = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
-            spi,
-            pin.clone(),
-        )
-        .unwrap();
+        let spidev =
+            embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
         let mut icm = ICM42688::new(spidev);
         let _ = icm.bank::<BANK1>();
 
@@ -119,10 +104,7 @@ mod test {
     #[test]
     fn test_who_am_i() {
         let expectations: &[SpiTransaction<u8>] = &[
-            SpiTransaction::transfer_in_place(
-                vec![0x75 | 0x80, 0x00],
-                vec![0x12, 0x47],
-            ),
+            SpiTransaction::transfer_in_place(vec![0x75 | 0x80, 0x00], vec![0x12, 0x47]),
             SpiTransaction::flush(),
         ];
 
@@ -132,11 +114,8 @@ mod test {
             PinTransaction::set(PinState::Low),
             PinTransaction::set(PinState::High),
         ]);
-        let spidev = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
-            spi,
-            pin.clone(),
-        )
-        .unwrap();
+        let spidev =
+            embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
         let mut icm = ICM42688::new(spidev);
         let mut bank = icm.bank::<BANK0>();
         let whoami = bank.who_am_i().read().unwrap().value();
@@ -151,10 +130,7 @@ mod test {
     #[async_std::test]
     async fn test_who_am_i_async() {
         let expectations: &[SpiTransaction<u8>] = &[
-            SpiTransaction::transfer_in_place(
-                vec![0x75 | 0x80, 0x00],
-                vec![0x12, 0x47],
-            ),
+            SpiTransaction::transfer_in_place(vec![0x75 | 0x80, 0x00], vec![0x12, 0x47]),
             SpiTransaction::flush(),
         ];
 
@@ -164,11 +140,8 @@ mod test {
             PinTransaction::set(PinState::Low),
             PinTransaction::set(PinState::High),
         ]);
-        let spidev = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(
-            spi,
-            pin.clone(),
-        )
-        .unwrap();
+        let spidev =
+            embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
         let mut icm = ICM42688::new(spidev);
         let mut bank = icm.bank::<BANK0>();
         let whoami = bank.who_am_i().async_read().await.unwrap().value();

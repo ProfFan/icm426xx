@@ -53,10 +53,7 @@ where
     ///
     /// Buffer must hold at least
     #[cfg(feature = "async")]
-    pub async fn read_fifo(
-        &mut self,
-        buffer: &mut [u32],
-    ) -> Result<usize, SPI::Error> {
+    pub async fn read_fifo(&mut self, buffer: &mut [u32]) -> Result<usize, SPI::Error> {
         /// We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
         /// one go
         const INT_STATUS_ADDR: u8 = crate::register_bank::bank0::INT_STATUS::ID;
@@ -91,9 +88,7 @@ where
     /// - `Ok(None)`: If the FIFO was empty or the packet read was invalid
     ///   (e.g., an "empty" marker).
     /// - `Err(Error::Bus(_))`: If a communication error occurs on the SPI bus.
-    pub async fn read_sample(
-        &mut self,
-    ) -> Result<Option<(Sample, bool)>, Error<SPI::Error>> {
+    pub async fn read_sample(&mut self) -> Result<Option<(Sample, bool)>, Error<SPI::Error>> {
         // We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
         // one go. The leading byte in the buffer is used to signal register
         // address, it's output doesn't contain data on return.
@@ -132,9 +127,7 @@ where
     /// - `Ok(None)`: If the FIFO was empty or the packet read was invalid
     ///   (e.g., an "empty" marker).
     /// - `Err(Error::Bus(_))`: If a communication error occurs on the SPI bus.
-    pub fn read_sample(
-        &mut self,
-    ) -> Result<Option<(Sample, bool)>, Error<SPI::Error>> {
+    pub fn read_sample(&mut self) -> Result<Option<(Sample, bool)>, Error<SPI::Error>> {
         // We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
         // one go. The leading byte in the buffer is used to signal register
         // address, it's output doesn't contain data on return.
@@ -168,8 +161,7 @@ where
                 // The signed 20-bit quantity corresponds to ±2000 degrees per
                 // second. 1 degree = π/180 radians.
                 const FULL_SCALE_DPS: f32 = 2000.0;
-                let scale = core::f32::consts::PI / 180.0 * FULL_SCALE_DPS
-                    / FULL_1SIDE_RANGE;
+                let scale = core::f32::consts::PI / 180.0 * FULL_SCALE_DPS / FULL_1SIDE_RANGE;
                 (gx as f32 * scale, gy as f32 * scale, gz as f32 * scale)
             });
             let accel = (p.fifo_header().has_accel().value() != 0).then(|| {
@@ -186,9 +178,8 @@ where
             // Temperature is always provided.
             // Using formula as stated in data sheet.
             const TEMP_SENSITIVITY_LSB_PER_CELSIUS: f32 = 2.07;
-            let temperature_celsius = p.temperature_raw() as f32
-                / TEMP_SENSITIVITY_LSB_PER_CELSIUS
-                + 25.0;
+            let temperature_celsius =
+                p.temperature_raw() as f32 / TEMP_SENSITIVITY_LSB_PER_CELSIUS + 25.0;
 
             Sample {
                 accel,
@@ -200,10 +191,7 @@ where
     }
 
     #[cfg(not(feature = "async"))]
-    pub fn read_fifo(
-        &mut self,
-        buffer: &mut [u32],
-    ) -> Result<usize, SPI::Error> {
+    pub fn read_fifo(&mut self, buffer: &mut [u32]) -> Result<usize, SPI::Error> {
         /// We read INT_STATUS, FIFO_COUNT_H, FIFO_COUNT_L, and then the data in
         /// one go
         const INT_STATUS_ADDR: u8 = crate::register_bank::bank0::INT_STATUS::ID;
