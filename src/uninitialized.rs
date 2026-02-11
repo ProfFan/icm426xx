@@ -6,7 +6,9 @@ use embedded_hal_async::delay::DelayNs;
 #[cfg(not(feature = "async"))]
 use embedded_hal::delay::DelayNs;
 
-use crate::{Error, Ready, Uninitialized, ICM42688};
+use core::marker::PhantomData;
+
+use crate::{Device, Error, Ready, Uninitialized, ICM42688};
 
 /// Determines how the interrupt signal is generated.
 ///
@@ -91,11 +93,12 @@ impl Default for Config {
     }
 }
 
-impl<SPI> ICM42688<SPI, Uninitialized> {
+impl<SPI, D: Device> ICM42688<SPI, Uninitialized, D> {
     pub fn new(spi: SPI) -> Self {
         ICM42688 {
             ll: crate::ll::ICM42688::new(spi),
             _state: Uninitialized,
+            _device: PhantomData,
         }
     }
 
@@ -165,7 +168,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         mut self,
         mut delay: impl DelayNs,
         config: Config,
-    ) -> Result<ICM42688<SPI, Ready>, Error<SPI::Error>>
+    ) -> Result<ICM42688<SPI, Ready, D>, Error<SPI::Error>>
     where
         SPI: embedded_hal_async::spi::SpiDevice,
     {
@@ -186,7 +189,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
 
         // Read the WHO_AM_I register to verify the device is present
         let who_am_i = bank0.who_am_i().async_read().await?.value();
-        if who_am_i != 0x47 {
+        if who_am_i != D::WHO_AM_I {
             return Err(Error::WhoAmIMismatch(who_am_i));
         }
 
@@ -359,6 +362,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         Ok(ICM42688 {
             ll: self.ll,
             _state: Ready,
+            _device: PhantomData,
         })
     }
 
@@ -367,7 +371,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         mut self,
         mut delay: impl DelayNs,
         config: Config,
-    ) -> Result<ICM42688<SPI, Ready>, Error<SPI::Error>>
+    ) -> Result<ICM42688<SPI, Ready, D>, Error<SPI::Error>>
     where
         SPI: embedded_hal::spi::SpiDevice,
     {
@@ -387,7 +391,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
 
         // Read the WHO_AM_I register to verify the device is present
         let who_am_i = bank0.who_am_i().read()?.value();
-        if who_am_i != 0x47 {
+        if who_am_i != D::WHO_AM_I {
             return Err(Error::WhoAmIMismatch(who_am_i));
         }
 
@@ -508,6 +512,7 @@ impl<SPI> ICM42688<SPI, Uninitialized> {
         Ok(ICM42688 {
             ll: self.ll,
             _state: Ready,
+            _device: PhantomData,
         })
     }
 

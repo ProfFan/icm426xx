@@ -1,6 +1,8 @@
 #![no_std]
 #![cfg_attr(not(doctest), doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md")))]
 
+use core::marker::PhantomData;
+
 pub mod fifo;
 pub mod ll;
 pub mod ready;
@@ -43,7 +45,53 @@ impl<BusError> From<BusError> for Error<BusError> {
     }
 }
 
+mod sealed {
+    pub trait Sealed {}
+}
+
+/// Trait describing a specific device variant in the ICM-426xx family.
+///
+/// This trait is sealed and cannot be implemented outside of this crate.
+pub trait Device: sealed::Sealed {
+    /// Expected WHO_AM_I register value.
+    const WHO_AM_I: u8;
+    /// Full-scale gyroscope range in degrees per second (for 20-bit FIFO mode).
+    const GYRO_FULL_SCALE_DPS: f32;
+    /// Full-scale accelerometer range in g (for 20-bit FIFO mode).
+    const ACCEL_FULL_SCALE_G: f32;
+}
+
+/// Marker type for the ICM-42688-P variant.
+///
+/// WHO_AM_I = 0x47, gyro ±2000 dps, accel ±16g.
+pub struct Icm42688p;
+
+impl sealed::Sealed for Icm42688p {}
+impl Device for Icm42688p {
+    const WHO_AM_I: u8 = 0x47;
+    const GYRO_FULL_SCALE_DPS: f32 = 2000.0;
+    const ACCEL_FULL_SCALE_G: f32 = 16.0;
+}
+
+/// Marker type for the ICM-42686-P variant.
+///
+/// WHO_AM_I = 0x44, gyro ±4000 dps, accel ±32g.
+pub struct Icm42686p;
+
+impl sealed::Sealed for Icm42686p {}
+impl Device for Icm42686p {
+    const WHO_AM_I: u8 = 0x44;
+    const GYRO_FULL_SCALE_DPS: f32 = 4000.0;
+    const ACCEL_FULL_SCALE_G: f32 = 32.0;
+}
+
+/// Type alias for the ICM-42686-P variant.
+pub type ICM42686<SPI, State> = ICM42688<SPI, State, Icm42686p>;
+
 /// ICM42688 top-level driver
+///
+/// The `D` type parameter selects the device variant and defaults to
+/// [`Icm42688p`]. Use [`Icm42686`] (a type alias) for the ICM-42686-P.
 ///
 /// Usage:
 ///
@@ -72,7 +120,8 @@ impl<BusError> From<BusError> for Error<BusError> {
 ///     }
 /// }
 /// ```
-pub struct ICM42688<SPI, State> {
+pub struct ICM42688<SPI, State, D: Device = Icm42688p> {
     ll: crate::ll::ICM42688<SPI>,
     _state: State,
+    _device: PhantomData<D>,
 }
