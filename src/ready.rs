@@ -7,10 +7,10 @@ use embedded_hal::spi::SpiDevice;
 use crate::{
     fifo::{FifoPacket4, Sample},
     register_bank::{bank0::int_status, Register},
-    Error, Ready, ICM42688,
+    Device, Error, Ready, ICM42688,
 };
 
-impl<SPI> ICM42688<SPI, Ready>
+impl<SPI, D: Device> ICM42688<SPI, Ready, D>
 where
     SPI: SpiDevice,
 {
@@ -158,10 +158,10 @@ where
                 let gy = p.gyro_data_y();
                 let gz = p.gyro_data_z();
                 // Packet 4 => full scale reading.
-                // The signed 20-bit quantity corresponds to ±2000 degrees per
-                // second. 1 degree = π/180 radians.
-                const FULL_SCALE_DPS: f32 = 2000.0;
-                let scale = core::f32::consts::PI / 180.0 * FULL_SCALE_DPS / FULL_1SIDE_RANGE;
+                // The signed 20-bit quantity corresponds to the device's
+                // full-scale gyro range. 1 degree = π/180 radians.
+                let scale =
+                    core::f32::consts::PI / 180.0 * D::GYRO_FULL_SCALE_DPS / FULL_1SIDE_RANGE;
                 (gx as f32 * scale, gy as f32 * scale, gz as f32 * scale)
             });
             let accel = (p.fifo_header().has_accel().value() != 0).then(|| {
@@ -169,10 +169,10 @@ where
                 let ay = p.accel_data_y();
                 let az = p.accel_data_z();
                 // Packet 4 => full scale reading.
-                // The signed 20-bit quantity corresponds to ±16g.
+                // The signed 20-bit quantity corresponds to the device's
+                // full-scale accel range.
                 const STD_GRAVITY: f32 = 9.80665;
-                const FULL_SCALE_G: f32 = 16.0;
-                let scale = STD_GRAVITY * FULL_SCALE_G / FULL_1SIDE_RANGE;
+                let scale = STD_GRAVITY * D::ACCEL_FULL_SCALE_G / FULL_1SIDE_RANGE;
                 (ax as f32 * scale, ay as f32 * scale, az as f32 * scale)
             });
             // Temperature is always provided.

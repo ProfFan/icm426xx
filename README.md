@@ -8,6 +8,7 @@ This is a platform agnostic Rust driver for the ICM-426xx 6-axis motion sensor u
 Currently supported devices:
 
 - ICM-42688-P
+- ICM-42686-P
 
 We support both the I2C and SPI interface, but currently only the SPI interface is tested. PRs are welcome!
 
@@ -30,8 +31,13 @@ async fn main() {
     let spidev =
         embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, pin.clone()).unwrap();
 
+    // For ICM-42688-P (default):
     let mut icm = icm426xx::ICM42688::new(spidev);
     let mut icm = icm.initialize(Delay).await.unwrap();
+
+    // For ICM-42686-P, use the type alias instead:
+    // let mut icm = icm426xx::ICM42686::new(spidev);
+
     let mut bank = icm.ll().bank::<{ icm426xx::register_bank::BANK0 }>();
 
     // print WHO_AM_I register
